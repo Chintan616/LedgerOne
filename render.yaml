@@ -1,0 +1,90 @@
+services:
+  # 1. API Gateway (Public Web Service)
+  - type: web
+    name: ledgerone-gateway
+    env: docker
+    dockerContext: ./api-gateway
+    dockerfilePath: ./api-gateway/Dockerfile
+    envVars:
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://ledgerone-eureka:8761/eureka/
+      - key: JWT_SECRET
+        generateValue: true
+
+  # 2. Eureka Service Registry (Private)
+  - type: pserv
+    name: ledgerone-eureka
+    env: docker
+    dockerContext: ./eureka-server
+    dockerfilePath: ./eureka-server/Dockerfile
+
+  # 3. Auth Service (Private)
+  - type: pserv
+    name: ledgerone-auth
+    env: docker
+    dockerContext: ./auth-service
+    dockerfilePath: ./auth-service/Dockerfile
+    envVars:
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://ledgerone-eureka:8761/eureka/
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: ledgerone-gateway
+          envVarKey: JWT_SECRET
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+  # 4. Invoice Service (Private)
+  - type: pserv
+    name: ledgerone-invoice
+    env: docker
+    dockerContext: ./invoice-service
+    dockerfilePath: ./invoice-service/Dockerfile
+    envVars:
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://ledgerone-eureka:8761/eureka/
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  # 5. Accounting Service (Private)
+  - type: pserv
+    name: ledgerone-accounting
+    env: docker
+    dockerContext: ./accounting-service
+    dockerfilePath: ./accounting-service/Dockerfile
+    envVars:
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://ledgerone-eureka:8761/eureka/
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+  # 6. Notification Service (Private)
+  - type: pserv
+    name: ledgerone-notification
+    env: docker
+    dockerContext: ./notification-service
+    dockerfilePath: ./notification-service/Dockerfile
+    envVars:
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://ledgerone-eureka:8761/eureka/
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
