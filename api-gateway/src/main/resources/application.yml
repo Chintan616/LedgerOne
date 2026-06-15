@@ -15,7 +15,7 @@ spring:
         - id: invoice-service
           uri: http://localhost:8082
           predicates:
-            - Path=/api/invoices/**, /api/clients/**
+            - Path=/api/invoices/**, /api/clients/**, /api/profile/**
 
         - id: accounting-service
           uri: http://localhost:8083

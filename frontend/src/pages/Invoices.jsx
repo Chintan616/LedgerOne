@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
-import { getInvoices, updateInvoiceStatus, deleteInvoice, downloadInvoicePdf } from '../api/invoices'
+import { getInvoices, updateInvoiceStatus, deleteInvoice, downloadInvoicePdf, getInvoicePdfUrl } from '../api/invoices'
 
 const STATUS_STYLES = {
   DRAFT:   'bg-gray-100 text-gray-600',
@@ -25,6 +25,9 @@ export default function Invoices() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState(null)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [modalUrl, setModalUrl] = useState(null)
   const navigate = useNavigate()
 
   const load = async () => {
@@ -74,6 +77,25 @@ export default function Invoices() {
     }
   }
 
+  const handleView = async (inv) => {
+    setActionLoading(inv.id + 'view')
+    try {
+      const url = await getInvoicePdfUrl(inv.id)
+      setModalUrl(url)
+    } catch {
+      setError('PDF load failed')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const closeModal = () => {
+    if (modalUrl) {
+      URL.revokeObjectURL(modalUrl)
+      setModalUrl(null)
+    }
+  }
+
   return (
     <Layout>
       <div className="flex items-center justify-between mb-8">
@@ -90,6 +112,31 @@ export default function Invoices() {
           </svg>
           New Invoice
         </button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search by invoice number or client name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div className="sm:w-48">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="DRAFT">Draft</option>
+            <option value="SENT">Sent</option>
+            <option value="PAID">Paid</option>
+            <option value="OVERDUE">Overdue</option>
+          </select>
+        </div>
       </div>
 
       {error && (
@@ -125,7 +172,18 @@ export default function Invoices() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {invoices.map((inv) => (
+              {invoices
+                .filter(inv => statusFilter === 'ALL' || inv.status === statusFilter)
+                .filter(inv => {
+                  if (!search) return true
+                  const term = search.toLowerCase()
+                  return (
+                    inv.invoiceNumber?.toLowerCase().includes(term) ||
+                    inv.client?.name?.toLowerCase().includes(term) ||
+                    inv.client?.companyName?.toLowerCase().includes(term)
+                  )
+                })
+                .map((inv) => (
                 <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-mono text-xs text-gray-900 font-semibold">
                     {inv.invoiceNumber}
@@ -155,6 +213,21 @@ export default function Invoices() {
                           {next === 'PAID' ? 'Mark Paid' : next === 'SENT' ? 'Mark Sent' : 'Mark Overdue'}
                         </button>
                       ))}
+
+                      {/* View PDF */}
+                      <button
+                        onClick={() => handleView(inv)}
+                        disabled={actionLoading === inv.id + 'view'}
+                        title="View PDF"
+                        className="text-gray-500 hover:text-indigo-600 disabled:opacity-50"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
 
                       {/* Download PDF */}
                       <button
@@ -194,6 +267,32 @@ export default function Invoices() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* PDF Viewer Modal */}
+      {modalUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900 bg-opacity-75">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-900">Invoice Viewer</h3>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-gray-600 focus:outline-none"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 bg-gray-100 p-4">
+              <iframe
+                src={modalUrl}
+                className="w-full h-full rounded border border-gray-300 shadow-sm"
+                title="PDF Viewer"
+              />
+            </div>
+          </div>
         </div>
       )}
     </Layout>

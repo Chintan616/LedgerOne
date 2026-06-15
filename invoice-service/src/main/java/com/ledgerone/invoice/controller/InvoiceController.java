@@ -4,6 +4,8 @@ import com.ledgerone.invoice.dto.InvoiceRequest;
 import com.ledgerone.invoice.dto.InvoiceResponse;
 import com.ledgerone.invoice.dto.StatusUpdateRequest;
 import com.ledgerone.invoice.entity.Invoice;
+import com.ledgerone.invoice.entity.BusinessProfile;
+import com.ledgerone.invoice.service.BusinessProfileService;
 import com.ledgerone.invoice.service.InvoiceService;
 import com.ledgerone.invoice.service.PdfService;
 import jakarta.validation.Valid;
@@ -23,10 +25,12 @@ public class InvoiceController {
 
     private final InvoiceService invoiceService;
     private final PdfService pdfService;
+    private final BusinessProfileService businessProfileService;
 
-    public InvoiceController(InvoiceService invoiceService, PdfService pdfService) {
+    public InvoiceController(InvoiceService invoiceService, PdfService pdfService, BusinessProfileService businessProfileService) {
         this.invoiceService = invoiceService;
         this.pdfService = pdfService;
+        this.businessProfileService = businessProfileService;
     }
 
     @GetMapping
@@ -79,7 +83,8 @@ public class InvoiceController {
             @PathVariable Long id,
             @RequestHeader("X-User-Email") String userEmail) throws IOException {
         Invoice invoice = invoiceService.findOwnedInvoiceEntity(id, userEmail);
-        byte[] pdf = pdfService.generateInvoicePdf(invoice);
+        BusinessProfile profile = businessProfileService.getProfileEntity(userEmail);
+        byte[] pdf = pdfService.generateInvoicePdf(invoice, profile);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);

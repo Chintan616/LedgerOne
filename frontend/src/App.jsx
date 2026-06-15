@@ -9,6 +9,7 @@ import Invoices from './pages/Invoices'
 import InvoiceForm from './pages/InvoiceForm'
 import Expenses from './pages/Expenses'
 import ExpenseForm from './pages/ExpenseForm'
+import Profile from './pages/Profile'
 import Reports from './pages/Reports'
 
 function P({ children }) {
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/expenses" element={<P><Expenses /></P>} />
           <Route path="/expenses/new" element={<P><ExpenseForm /></P>} />
           <Route path="/expenses/:id/edit" element={<P><ExpenseForm /></P>} />
+          <Route path="/profile" element={<P><Profile /></P>} />
           <Route path="/reports" element={<P><Reports /></P>} />
         </Routes>
       </AuthProvider>

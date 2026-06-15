@@ -16,3 +16,8 @@ export const downloadInvoicePdf = async (id, invoiceNumber) => {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+export const getInvoicePdfUrl = async (id) => {
+  const res = await api.get(`/invoices/${id}/pdf`, { responseType: 'blob' })
+  return URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+}

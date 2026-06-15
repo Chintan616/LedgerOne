@@ -33,10 +33,14 @@ public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
     private final ClientRepository clientRepository;
+    private final com.ledgerone.invoice.client.NotificationServiceClient notificationClient;
 
-    public InvoiceService(InvoiceRepository invoiceRepository, ClientRepository clientRepository) {
+    public InvoiceService(InvoiceRepository invoiceRepository, 
+                          ClientRepository clientRepository,
+                          com.ledgerone.invoice.client.NotificationServiceClient notificationClient) {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
+        this.notificationClient = notificationClient;
     }
 
     @Cacheable(value = "invoices", key = "#userEmail")
@@ -117,6 +121,16 @@ public class InvoiceService {
         invoice.setStatus(request.status());
         Invoice updated = invoiceRepository.save(invoice);
         log.info("Invoice {} status changed to {} for user: {}", updated.getInvoiceNumber(), request.status(), userEmail);
+        
+        if (request.status() == InvoiceStatus.SENT) {
+            try {
+                notificationClient.sendInvoiceNotification(new com.ledgerone.invoice.client.SendInvoiceRequest(updated.getId(), userEmail));
+                log.info("Triggered notification for invoice: {}", updated.getId());
+            } catch (Exception e) {
+                log.error("Failed to trigger notification for invoice: {}", updated.getId(), e);
+            }
+        }
+        
         return InvoiceResponse.from(updated);
     }
 

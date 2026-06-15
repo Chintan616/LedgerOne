@@ -41,7 +41,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <StatCard
           label="Total Revenue"
           value={fmt(stats?.totalRevenue)}
@@ -60,6 +60,12 @@ export default function Dashboard() {
           icon="👥"
           color="indigo"
           onClick={() => navigate('/clients')}
+        />
+        <StatCard
+          label="Paid Rate"
+          value={stats ? `${(((stats.totalRevenue || 0) / ((stats.totalRevenue || 0) + (stats.totalOutstandingAmount || 0)) || 0) * 100).toFixed(0)}%` : '—'}
+          icon="📈"
+          color="purple"
         />
         <StatCard
           label="Unpaid Invoices"
@@ -132,6 +138,7 @@ function StatCard({ label, value, icon, color, onClick }) {
     green:  'bg-green-50 text-green-700',
     blue:   'bg-blue-50 text-blue-700',
     indigo: 'bg-indigo-50 text-indigo-700',
+    purple: 'bg-purple-50 text-purple-700',
     red:    'bg-red-50 text-red-700',
   }
 
