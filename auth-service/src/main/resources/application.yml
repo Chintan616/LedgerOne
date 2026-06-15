@@ -5,9 +5,9 @@ spring:
   application:
     name: auth-service
   datasource:
-    url: jdbc:postgresql://ep-autumn-waterfall-atvjxk1j-pooler.c-9.us-east-1.aws.neon.tech/LedgerOne?sslmode=require
-    username: neondb_owner
-    password: REDACTED_NEON_PASSWORD
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
