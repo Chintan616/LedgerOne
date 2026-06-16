@@ -5,9 +5,9 @@ spring:
   application:
     name: ledgerone-backend
   datasource:
-    url: jdbc:postgresql://ep-autumn-waterfall-atvjxk1j-pooler.c-9.us-east-1.aws.neon.tech/LedgerOne?user=neondb_owner&password=REDACTED_NEON_PASSWORD&sslmode=require&channelBinding=require
-    username: neondb_owner
-    password: REDACTED_NEON_PASSWORD
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -19,7 +19,7 @@ spring:
         format_sql: true
   data:
     redis:
-      url: "rediss://default:REDACTED_UPSTASH_TOKEN@literate-termite-139779.upstash.io:6379"
+      url: ${REDIS_URL}
       repositories:
         enabled: false
   cache:
@@ -27,8 +27,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: chintukasundra060106@gmail.com
-    password: REDACTED_GMAIL_APP_PASSWORD_2
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
