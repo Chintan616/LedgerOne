@@ -7,5 +7,8 @@ public record BusinessProfileRequest(
         String address,
         String phone,
         String email,
-        String gstNumber
+        String gstNumber,
+        String bankName,
+        String accountNumber,
+        String ifscCode
 ) {}

@@ -56,7 +56,7 @@ export default function Dashboard() {
         />
         <StatCard
           label="Total Clients"
-          value={stats?.uniqueClients ?? '—'}
+          value={stats?.totalClients ?? '—'}
           icon="👥"
           color="indigo"
           onClick={() => navigate('/clients')}

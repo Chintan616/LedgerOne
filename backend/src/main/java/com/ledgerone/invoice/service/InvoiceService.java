@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,7 +60,10 @@ public class InvoiceService {
         return InvoiceResponse.from(invoice);
     }
 
-    @CacheEvict(value = "invoices", key = "#userEmail")
+    @Caching(evict = {
+            @CacheEvict(value = "invoices", key = "#userEmail"),
+            @CacheEvict(value = "summary",  key = "#userEmail")
+    })
     @Transactional
     public InvoiceResponse createInvoice(InvoiceRequest request, String userEmail) {
         Client client = clientRepository.findByIdAndUserEmail(request.clientId(), userEmail)
@@ -90,7 +94,10 @@ public class InvoiceService {
         return InvoiceResponse.from(result);
     }
 
-    @CacheEvict(value = "invoices", key = "#userEmail")
+    @Caching(evict = {
+            @CacheEvict(value = "invoices", key = "#userEmail"),
+            @CacheEvict(value = "summary",  key = "#userEmail")
+    })
     @Transactional
     public InvoiceResponse updateInvoice(Long id, InvoiceRequest request, String userEmail) {
         Invoice invoice = findOwnedInvoice(id, userEmail);
@@ -118,7 +125,10 @@ public class InvoiceService {
         return InvoiceResponse.from(invoiceRepository.save(invoice));
     }
 
-    @CacheEvict(value = "invoices", key = "#userEmail")
+    @Caching(evict = {
+            @CacheEvict(value = "invoices", key = "#userEmail"),
+            @CacheEvict(value = "summary",  key = "#userEmail")
+    })
     @Transactional
     public InvoiceResponse updateStatus(Long id, StatusUpdateRequest request, String userEmail) {
         Invoice invoice = findOwnedInvoice(id, userEmail);
@@ -135,7 +145,10 @@ public class InvoiceService {
         return InvoiceResponse.from(updated);
     }
 
-    @CacheEvict(value = "invoices", key = "#userEmail")
+    @Caching(evict = {
+            @CacheEvict(value = "invoices", key = "#userEmail"),
+            @CacheEvict(value = "summary",  key = "#userEmail")
+    })
     @Transactional
     public void deleteInvoice(Long id, String userEmail) {
         Invoice invoice = findOwnedInvoice(id, userEmail);

@@ -1,6 +1,7 @@
 package com.ledgerone.auth.service;
 
 import com.ledgerone.auth.dto.AuthResponse;
+import com.ledgerone.auth.dto.GoogleLoginRequest;
 import com.ledgerone.auth.dto.LoginRequest;
 import com.ledgerone.auth.dto.RefreshTokenRequest;
 import com.ledgerone.auth.dto.RegisterRequest;
@@ -15,6 +16,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 public class AuthService {
 
@@ -24,6 +27,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final GoogleTokenVerifier googleTokenVerifier;
 
     public AuthService(
             UserRepository userRepository,
@@ -31,13 +35,15 @@ public class AuthService {
             RefreshTokenService refreshTokenService,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            AuthenticationManager authenticationManager) {
+            AuthenticationManager authenticationManager,
+            GoogleTokenVerifier googleTokenVerifier) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.refreshTokenService = refreshTokenService;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
+        this.googleTokenVerifier = googleTokenVerifier;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -88,5 +94,27 @@ public class AuthService {
 
     public void logout(RefreshTokenRequest request) {
         refreshTokenService.deleteByToken(request.refreshToken());
+    }
+
+    public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
+        GoogleTokenVerifier.GoogleUserInfo googleUser = googleTokenVerifier.verify(request.idToken());
+
+        User user = userRepository.findByEmail(googleUser.email())
+                .orElseGet(() -> registerGoogleUser(googleUser));
+
+        String accessToken = jwtService.generateToken(user.getEmail());
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return new AuthResponse(accessToken, refreshToken.getToken(), user.getName(), user.getEmail());
+    }
+
+    private User registerGoogleUser(GoogleTokenVerifier.GoogleUserInfo googleUser) {
+        User user = new User();
+        user.setName(googleUser.name());
+        user.setEmail(googleUser.email());
+        // Google-authenticated users never log in with a password; store an
+        // unguessable hash so the column constraint is satisfied safely.
+        user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+        return userRepository.save(user);
     }
 }

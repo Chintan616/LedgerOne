@@ -31,6 +31,9 @@ public class BusinessProfileService {
         profile.setPhone(request.phone());
         profile.setEmail(request.email());
         profile.setGstNumber(request.gstNumber());
+        profile.setBankName(request.bankName());
+        profile.setAccountNumber(request.accountNumber());
+        profile.setIfscCode(request.ifscCode());
 
         return BusinessProfileResponse.from(repository.save(profile));
     }

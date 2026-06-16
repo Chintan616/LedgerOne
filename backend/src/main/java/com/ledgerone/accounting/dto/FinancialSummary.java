@@ -13,6 +13,6 @@ public record FinancialSummary(
         long pendingInvoices,
         long overdueInvoices,
         long unpaidInvoices,
-        long uniqueClients,
+        long totalClients,
         long totalExpenseCount
 ) {}

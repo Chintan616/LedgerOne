@@ -6,6 +6,7 @@ import com.ledgerone.exception.AppException;
 import com.ledgerone.accounting.repository.ExpenseRepository;
 import com.ledgerone.invoice.dto.InvoiceResponse;
 import com.ledgerone.invoice.entity.InvoiceStatus;
+import com.ledgerone.invoice.repository.ClientRepository;
 import com.ledgerone.invoice.service.InvoiceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,11 +29,14 @@ public class AccountingService {
 
     private final ExpenseRepository expenseRepository;
     private final InvoiceService invoiceService;
+    private final ClientRepository clientRepository;
 
     public AccountingService(ExpenseRepository expenseRepository,
-                             InvoiceService invoiceService) {
+                             InvoiceService invoiceService,
+                             ClientRepository clientRepository) {
         this.expenseRepository = expenseRepository;
         this.invoiceService = invoiceService;
+        this.clientRepository = clientRepository;
     }
 
     // ── Expenses ─────────────────────────────────────────────────────────────
@@ -46,6 +50,7 @@ public class AccountingService {
 
     @Caching(evict = {
             @CacheEvict(value = "expenses", key = "#userEmail"),
+            @CacheEvict(value = "summary",  key = "#userEmail"),
             @CacheEvict(value = "gst",      allEntries = true),
             @CacheEvict(value = "monthly",  allEntries = true)
     })
@@ -80,6 +85,7 @@ public class AccountingService {
 
     // ── Financial Summary ─────────────────────────────────────────────────────
 
+    @Cacheable(value = "summary", key = "#userEmail")
     public FinancialSummary getSummary(String userEmail) {
         log.debug("Cache miss — computing financial summary for {}", userEmail);
 
@@ -100,10 +106,7 @@ public class AccountingService {
         long pending = invoices.stream().filter(i -> i.status() == InvoiceStatus.SENT).count();
         long overdue = invoices.stream().filter(i -> i.status() == InvoiceStatus.OVERDUE).count();
         long unpaidInvoices = pending + overdue;
-        long clients = invoices.stream()
-                .filter(i -> i.client() != null)
-                .map(i -> i.client().id())
-                .distinct().count();
+        long clients = clientRepository.countByUserEmail(userEmail);
 
         return new FinancialSummary(
                 revenue, totalExpenses, revenue.subtract(totalExpenses),

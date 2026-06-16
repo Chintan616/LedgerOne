@@ -1,6 +1,7 @@
 package com.ledgerone.auth.controller;
 
 import com.ledgerone.auth.dto.AuthResponse;
+import com.ledgerone.auth.dto.GoogleLoginRequest;
 import com.ledgerone.auth.dto.LoginRequest;
 import com.ledgerone.auth.dto.RefreshTokenRequest;
 import com.ledgerone.auth.dto.RegisterRequest;
@@ -28,6 +29,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> google(@Valid @RequestBody GoogleLoginRequest request) {
+        return ResponseEntity.ok(authService.loginWithGoogle(request));
     }
 
     @PostMapping("/refresh")

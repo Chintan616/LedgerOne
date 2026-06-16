@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface ClientRepository extends JpaRepository<Client, Long> {
     List<Client> findByUserEmailOrderByNameAsc(String userEmail);
     Optional<Client> findByIdAndUserEmail(Long id, String userEmail);
+    long countByUserEmail(String userEmail);
 }

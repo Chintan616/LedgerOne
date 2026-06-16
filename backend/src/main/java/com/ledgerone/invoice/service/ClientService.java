@@ -5,6 +5,7 @@ import com.ledgerone.invoice.dto.ClientResponse;
 import com.ledgerone.invoice.entity.Client;
 import com.ledgerone.exception.AppException;
 import com.ledgerone.invoice.repository.ClientRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +31,7 @@ public class ClientService {
         return ClientResponse.from(client);
     }
 
+    @CacheEvict(value = "summary", key = "#userEmail")
     public ClientResponse createClient(ClientRequest request, String userEmail) {
         Client client = new Client();
         client.setUserEmail(userEmail);
@@ -44,6 +46,7 @@ public class ClientService {
         return ClientResponse.from(clientRepository.save(client));
     }
 
+    @CacheEvict(value = "summary", key = "#userEmail")
     public void deleteClient(Long id, String userEmail) {
         Client client = clientRepository.findByIdAndUserEmail(id, userEmail)
                 .orElseThrow(() -> new AppException("Client not found", HttpStatus.NOT_FOUND));

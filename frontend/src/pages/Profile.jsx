@@ -13,7 +13,10 @@ export default function Profile() {
     address: '',
     phone: '',
     email: '',
-    gstNumber: ''
+    gstNumber: '',
+    bankName: '',
+    accountNumber: '',
+    ifscCode: ''
   })
 
   useEffect(() => {
@@ -25,7 +28,10 @@ export default function Profile() {
             address: res.data.address || '',
             phone: res.data.phone || '',
             email: res.data.email || '',
-            gstNumber: res.data.gstNumber || ''
+            gstNumber: res.data.gstNumber || '',
+            bankName: res.data.bankName || '',
+            accountNumber: res.data.accountNumber || '',
+            ifscCode: res.data.ifscCode || ''
           })
         }
       })
@@ -128,6 +134,46 @@ export default function Profile() {
                   rows="3"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="123 Main St, Tech City"
+                />
+              </div>
+
+              <div className="pt-2 border-t border-gray-100">
+                <h2 className="text-sm font-semibold text-gray-900 mt-4 mb-1">Payment Information</h2>
+                <p className="text-xs text-gray-500 mb-3">
+                  Shown in the "Payment Information" section of your generated invoice PDFs.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                <input
+                  type="text"
+                  value={form.bankName}
+                  onChange={(e) => setForm({ ...form, bankName: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="HDFC Bank"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                <input
+                  type="text"
+                  value={form.accountNumber}
+                  onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="50200012345678"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">IFSC Code</label>
+                <input
+                  type="text"
+                  value={form.ifscCode}
+                  onChange={(e) => setForm({ ...form, ifscCode: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="HDFC0001234"
                 />
               </div>
 

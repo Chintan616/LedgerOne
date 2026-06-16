@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
@@ -7,8 +7,9 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
+  const { login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
+  const googleButtonRef = useRef(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -23,6 +24,48 @@ export default function Login() {
       setLoading(false)
     }
   }
+
+  const handleGoogleCredential = async (response) => {
+    setError('')
+    setLoading(true)
+    try {
+      await loginWithGoogle(response.credential)
+      navigate('/dashboard')
+    } catch (err) {
+      setError(err.response?.data?.error || 'Google sign-in failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const renderGoogleButton = () => {
+      if (!window.google || !googleButtonRef.current) return
+      window.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+      })
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: 320,
+      })
+    }
+
+    const scriptId = 'google-identity-script'
+    if (document.getElementById(scriptId)) {
+      renderGoogleButton()
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = scriptId
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.onload = renderGoogleButton
+    document.body.appendChild(script)
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -89,6 +132,14 @@ export default function Login() {
               ) : 'Sign in'}
             </button>
           </form>
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400 uppercase tracking-wide">or</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+
+          <div ref={googleButtonRef} className="flex justify-center" />
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">

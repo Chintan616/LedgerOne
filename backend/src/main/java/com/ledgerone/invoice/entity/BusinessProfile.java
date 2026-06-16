@@ -24,6 +24,15 @@ public class BusinessProfile {
     @Column(name = "gst_number")
     private String gstNumber;
 
+    @Column(name = "bank_name")
+    private String bankName;
+
+    @Column(name = "account_number")
+    private String accountNumber;
+
+    @Column(name = "ifsc_code")
+    private String ifscCode;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -61,6 +70,15 @@ public class BusinessProfile {
 
     public String getGstNumber() { return gstNumber; }
     public void setGstNumber(String gstNumber) { this.gstNumber = gstNumber; }
+
+    public String getBankName() { return bankName; }
+    public void setBankName(String bankName) { this.bankName = bankName; }
+
+    public String getAccountNumber() { return accountNumber; }
+    public void setAccountNumber(String accountNumber) { this.accountNumber = accountNumber; }
+
+    public String getIfscCode() { return ifscCode; }
+    public void setIfscCode(String ifscCode) { this.ifscCode = ifscCode; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

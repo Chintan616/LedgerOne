@@ -8,7 +8,10 @@ public record BusinessProfileResponse(
         String address,
         String phone,
         String email,
-        String gstNumber
+        String gstNumber,
+        String bankName,
+        String accountNumber,
+        String ifscCode
 ) {
     public static BusinessProfileResponse from(BusinessProfile profile) {
         if (profile == null) return null;
@@ -18,7 +21,10 @@ public record BusinessProfileResponse(
                 profile.getAddress(),
                 profile.getPhone(),
                 profile.getEmail(),
-                profile.getGstNumber()
+                profile.getGstNumber(),
+                profile.getBankName(),
+                profile.getAccountNumber(),
+                profile.getIfscCode()
         );
     }
 }
