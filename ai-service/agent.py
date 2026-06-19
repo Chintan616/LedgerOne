@@ -9,9 +9,7 @@ from pydantic import BaseModel, Field
 
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import StructuredTool
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +38,7 @@ def _date_clause(period: str, col: str) -> tuple[str, dict]:
         return f"AND {col} >= :p_start", {"p_start": today.replace(month=1, day=1)}
     return "", {}
 
-# ── Raw query functions (private, always receive user_email) ──────────────────
+# ── Query functions ───────────────────────────────────────────────────────────
 
 def _find_client(user_email: str, name: str) -> str:
     return _q(
@@ -51,13 +49,8 @@ def _find_client(user_email: str, name: str) -> str:
         {"ue": user_email, "n": f"%{name}%"},
     )
 
-
-def _get_invoices(
-    user_email: str,
-    status: str = "all",
-    client_name: str | None = None,
-    period: str = "all",
-) -> str:
+def _get_invoices(user_email: str, status: str = "all",
+                  client_name: str | None = None, period: str = "all") -> str:
     conds = ["i.user_email = :ue"]
     params: dict = {"ue": user_email}
     if status != "all":
@@ -79,50 +72,42 @@ def _get_invoices(
         params,
     )
 
-
 def _get_financial_summary(user_email: str, period: str = "all") -> str:
     inv_clause, inv_dp = _date_clause(period, "issue_date")
     exp_clause, exp_dp = _date_clause(period, "date")
     inv_rows = json.loads(_q(
-        f"""SELECT status, COALESCE(SUM(total_amount), 0) AS total
-            FROM invoices WHERE user_email = :ue {inv_clause}
-            GROUP BY status""",
+        f"SELECT status, COALESCE(SUM(total_amount), 0) AS total FROM invoices "
+        f"WHERE user_email = :ue {inv_clause} GROUP BY status",
         {"ue": user_email, **inv_dp},
     ))
     exp_row = json.loads(_q(
-        f"""SELECT COALESCE(SUM(amount), 0) AS total
-            FROM expenses WHERE user_email = :ue {exp_clause}""",
+        f"SELECT COALESCE(SUM(amount), 0) AS total FROM expenses "
+        f"WHERE user_email = :ue {exp_clause}",
         {"ue": user_email, **exp_dp},
     ))
     out = {"revenue": 0.0, "pending": 0.0, "overdue": 0.0, "expenses": 0.0}
     for r in inv_rows:
-        if r["status"] == "PAID":
-            out["revenue"] = float(r["total"])
-        elif r["status"] == "SENT":
-            out["pending"] = float(r["total"])
-        elif r["status"] == "OVERDUE":
-            out["overdue"] = float(r["total"])
+        if r["status"] == "PAID":    out["revenue"] = float(r["total"])
+        elif r["status"] == "SENT":  out["pending"] = float(r["total"])
+        elif r["status"] == "OVERDUE": out["overdue"] = float(r["total"])
     out["expenses"] = float(exp_row[0]["total"])
     out["profit"] = out["revenue"] - out["expenses"]
     return json.dumps(out)
 
-
 def _get_expense_summary(user_email: str, period: str = "all") -> str:
     clause, dp = _date_clause(period, "date")
     return _q(
-        f"""SELECT category, SUM(amount) AS total, COUNT(*) AS count
-            FROM expenses WHERE user_email = :ue {clause}
-            GROUP BY category ORDER BY total DESC""",
+        f"SELECT category, SUM(amount) AS total, COUNT(*) AS count "
+        f"FROM expenses WHERE user_email = :ue {clause} "
+        f"GROUP BY category ORDER BY total DESC",
         {"ue": user_email, **dp},
     )
-
 
 def _get_top_clients(user_email: str, n: int = 5, period: str = "all") -> str:
     clause, dp = _date_clause(period, "i.issue_date")
     return _q(
-        f"""SELECT c.name, c.company_name,
-                   COUNT(i.id) AS invoices,
-                   COALESCE(SUM(CASE WHEN i.status='PAID'               THEN i.total_amount END), 0) AS paid,
+        f"""SELECT c.name, c.company_name, COUNT(i.id) AS invoices,
+                   COALESCE(SUM(CASE WHEN i.status='PAID' THEN i.total_amount END), 0) AS paid,
                    COALESCE(SUM(CASE WHEN i.status IN ('SENT','OVERDUE') THEN i.total_amount END), 0) AS pending
             FROM clients c JOIN invoices i ON i.client_id = c.id
             WHERE i.user_email = :ue {clause}
@@ -131,44 +116,36 @@ def _get_top_clients(user_email: str, n: int = 5, period: str = "all") -> str:
         {"ue": user_email, "n": n, **dp},
     )
 
-
 def _get_overdue_invoices(user_email: str) -> str:
     return _q(
         """SELECT i.invoice_number, c.name AS client, c.email AS client_email,
-                  i.due_date, i.total_amount,
-                  (CURRENT_DATE - i.due_date) AS days_overdue
+                  i.due_date, i.total_amount, (CURRENT_DATE - i.due_date) AS days_overdue
            FROM invoices i JOIN clients c ON i.client_id = c.id
            WHERE i.user_email = :ue AND i.status = 'OVERDUE'
            ORDER BY days_overdue DESC""",
         {"ue": user_email},
     )
 
-
 def _get_monthly_breakdown(user_email: str, year: int | None = None) -> str:
     y = year or datetime.date.today().year
     revenue = json.loads(_q(
         """SELECT EXTRACT(MONTH FROM issue_date)::int AS month,
-                  TO_CHAR(issue_date, 'Mon') AS label,
-                  SUM(total_amount) AS amount
-           FROM invoices
-           WHERE user_email = :ue AND status = 'PAID'
+                  TO_CHAR(issue_date, 'Mon') AS label, SUM(total_amount) AS amount
+           FROM invoices WHERE user_email = :ue AND status = 'PAID'
              AND EXTRACT(YEAR FROM issue_date) = :y
            GROUP BY 1, 2 ORDER BY 1""",
         {"ue": user_email, "y": y},
     ))
     expenses = json.loads(_q(
         """SELECT EXTRACT(MONTH FROM date)::int AS month,
-                  TO_CHAR(date, 'Mon') AS label,
-                  SUM(amount) AS amount
-           FROM expenses
-           WHERE user_email = :ue AND EXTRACT(YEAR FROM date) = :y
+                  TO_CHAR(date, 'Mon') AS label, SUM(amount) AS amount
+           FROM expenses WHERE user_email = :ue AND EXTRACT(YEAR FROM date) = :y
            GROUP BY 1, 2 ORDER BY 1""",
         {"ue": user_email, "y": y},
     ))
     return json.dumps({"year": y, "revenue_by_month": revenue, "expenses_by_month": expenses})
 
-
-# ── Pydantic input schemas for each tool ──────────────────────────────────────
+# ── Pydantic input schemas ────────────────────────────────────────────────────
 
 class FindClientInput(BaseModel):
     name: str = Field(description="Partial or full client name to search for")
@@ -191,9 +168,9 @@ class MonthlyBreakdownInput(BaseModel):
 class EmptyInput(BaseModel):
     pass
 
-# ── Build tool list bound to a specific user ──────────────────────────────────
+# ── Build LangChain StructuredTools bound to a specific user ──────────────────
 
-def _make_tools(user_email: str) -> list:
+def _make_tools(user_email: str) -> list[StructuredTool]:
     def find_client(name: str) -> str:
         return _find_client(user_email, name)
 
@@ -218,7 +195,7 @@ def _make_tools(user_email: str) -> list:
     return [
         StructuredTool.from_function(
             name="find_client",
-            description="Find a client by name (fuzzy/partial match). Use for any question about a specific client's details — GST number, email, phone, address.",
+            description="Find a client by name (fuzzy/partial match). Use for any question about a specific client: GST number, email, phone, address.",
             func=find_client,
             args_schema=FindClientInput,
         ),
@@ -248,7 +225,7 @@ def _make_tools(user_email: str) -> list:
         ),
         StructuredTool.from_function(
             name="get_overdue_invoices",
-            description="Get all overdue invoices with client contact info and number of days overdue.",
+            description="Get all overdue invoices with client contact info and days overdue.",
             func=get_overdue_invoices,
             args_schema=EmptyInput,
         ),
@@ -264,6 +241,12 @@ def _make_tools(user_email: str) -> list:
 
 _llm: ChatOpenAI | None = None
 
+_SYSTEM = (
+    "You are a financial assistant for LedgerOne, a cloud invoicing and accounting platform. "
+    "Always use the provided tools to fetch data — never guess or invent numbers. "
+    "Format all currency as ₹X,XXX. Be concise and friendly."
+)
+
 def _get_llm() -> ChatOpenAI:
     global _llm
     if _llm is None:
@@ -271,7 +254,6 @@ def _get_llm() -> ChatOpenAI:
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY is not set")
         logger.info("Initialising LLM, key prefix: %s", api_key[:12])
-        # Belt-and-suspenders: set env vars the underlying OpenAI SDK reads directly
         os.environ["OPENAI_API_KEY"] = api_key
         os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
         _llm = ChatOpenAI(
@@ -281,20 +263,6 @@ def _get_llm() -> ChatOpenAI:
             openai_api_base="https://openrouter.ai/api/v1",
         )
     return _llm
-
-# ── Prompt template ───────────────────────────────────────────────────────────
-
-_PROMPT = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        "You are a financial assistant for LedgerOne, a cloud invoicing and accounting platform. "
-        "Always use the provided tools to fetch data — never guess or invent numbers. "
-        "Format all currency as ₹X,XXX. Be concise and friendly.",
-    ),
-    MessagesPlaceholder(variable_name="chat_history"),
-    ("human", "{input}"),
-    MessagesPlaceholder(variable_name="agent_scratchpad"),
-])
 
 # ── Conversation store ────────────────────────────────────────────────────────
 
@@ -309,19 +277,36 @@ def run_chat(message: str, user_email: str, conversation_id: str | None) -> tupl
     history = _conversations.get(conversation_id, [])
     tools = _make_tools(user_email)
 
-    agent = create_tool_calling_agent(llm=_get_llm(), tools=tools, prompt=_PROMPT)
-    executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
+    # bind_tools tells LangChain's ChatOpenAI to send tool schemas in the
+    # OpenAI function-calling format — the LLM picks the right tool + args
+    llm_with_tools = _get_llm().bind_tools(tools)
+    tool_map = {t.name: t for t in tools}
 
-    try:
-        result = executor.invoke({
-            "input": message,
-            "chat_history": history[-6:],  # last 3 user/assistant pairs
-        })
-        reply = result["output"]
-    except Exception as exc:
-        logger.error("Agent error for %s: %s", user_email, exc)
-        reply = "Sorry, I couldn't process that. Please try rephrasing."
+    # Build LangChain message list
+    messages: list = [SystemMessage(content=_SYSTEM)]
+    messages.extend(history[-6:])  # last 3 user/assistant pairs
+    messages.append(HumanMessage(content=message))
 
+    reply = "I couldn't process that request. Please try again."
+
+    for _ in range(5):  # max 5 tool-call iterations per turn
+        response = llm_with_tools.invoke(messages)
+        messages.append(response)
+
+        if not response.tool_calls:
+            reply = response.content or reply
+            break
+
+        # Execute each tool LangChain selected and feed results back
+        for tc in response.tool_calls:
+            try:
+                result = tool_map[tc["name"]].invoke(tc["args"])
+            except Exception as exc:
+                logger.error("Tool %s failed: %s", tc["name"], exc)
+                result = json.dumps({"error": str(exc)})
+            messages.append(ToolMessage(content=str(result), tool_call_id=tc["id"]))
+
+    # Persist only the user/assistant pair to history
     _conversations[conversation_id] = (
         history + [HumanMessage(content=message), AIMessage(content=reply)]
     )[-10:]
