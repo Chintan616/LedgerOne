@@ -24,3 +24,19 @@ services:
         sync: false
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+      - key: AI_SERVICE_URL
+        sync: false
+
+  # LedgerOne AI Service (FastAPI + LangChain)
+  - type: web
+    name: ledgerone-ai
+    env: docker
+    dockerContext: ./ai-service
+    dockerfilePath: ./ai-service/Dockerfile
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: openai/gpt-4o-mini
+      - key: POSTGRES_URL
+        sync: false

@@ -48,6 +48,10 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
+ai:
+  service:
+    url: ${AI_SERVICE_URL:http://localhost:8001}
+
 logging:
   level:
     com.ledgerone: DEBUG
