@@ -42,7 +42,7 @@ def _date_clause(period: str, col: str) -> tuple[str, dict]:
 
 def _find_client(user_email: str, name: str) -> str:
     return _q(
-        """SELECT name, company_name, email, phone, gstin, address
+        """SELECT name, company_name, email, phone, gst_number, address
            FROM clients
            WHERE user_email = :ue AND name ILIKE :n
            ORDER BY name LIMIT 10""",
