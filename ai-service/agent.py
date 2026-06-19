@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, text
 from pydantic import BaseModel, Field
 
 from langchain_openai import ChatOpenAI
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
