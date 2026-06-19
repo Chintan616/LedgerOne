@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
@@ -19,24 +20,26 @@ function P({ children }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/dashboard" element={<P><Dashboard /></P>} />
-          <Route path="/clients" element={<P><Clients /></P>} />
-          <Route path="/invoices" element={<P><Invoices /></P>} />
-          <Route path="/invoices/new" element={<P><InvoiceForm /></P>} />
-          <Route path="/invoices/:id/edit" element={<P><InvoiceForm /></P>} />
-          <Route path="/expenses" element={<P><Expenses /></P>} />
-          <Route path="/expenses/new" element={<P><ExpenseForm /></P>} />
-          <Route path="/expenses/:id/edit" element={<P><ExpenseForm /></P>} />
-          <Route path="/profile" element={<P><Profile /></P>} />
-          <Route path="/reports" element={<P><Reports /></P>} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/dashboard" element={<P><Dashboard /></P>} />
+            <Route path="/clients" element={<P><Clients /></P>} />
+            <Route path="/invoices" element={<P><Invoices /></P>} />
+            <Route path="/invoices/new" element={<P><InvoiceForm /></P>} />
+            <Route path="/invoices/:id/edit" element={<P><InvoiceForm /></P>} />
+            <Route path="/expenses" element={<P><Expenses /></P>} />
+            <Route path="/expenses/new" element={<P><ExpenseForm /></P>} />
+            <Route path="/expenses/:id/edit" element={<P><ExpenseForm /></P>} />
+            <Route path="/profile" element={<P><Profile /></P>} />
+            <Route path="/reports" element={<P><Reports /></P>} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }

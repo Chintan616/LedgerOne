@@ -8,10 +8,27 @@
   }
 
   body {
-    @apply font-sans text-gray-900 bg-gray-50 antialiased;
+    @apply font-sans antialiased;
+    background-color: #f7f8fd;
+    color: #1e1b4b;
   }
 
-  input {
+  .dark body {
+    background-color: #0d1526;
+    color: #f0f1f8;
+  }
+
+  input,
+  textarea,
+  select {
     @apply outline-none;
   }
+}
+
+/* Brand gradient — referenced via inline style */
+.gradient-brand {
+  background: linear-gradient(135deg, #6d28d9, #7c3aed);
+}
+.dark .gradient-brand {
+  background: linear-gradient(135deg, #7c5cfc, #a855f7);
 }
