@@ -37,9 +37,13 @@ def _get_db() -> SQLDatabase:
 def _get_llm() -> ChatOpenAI:
     global _llm
     if _llm is None:
+        api_key = os.environ["OPENROUTER_API_KEY"]
+        # langchain_openai's internal OpenAI client reads OPENAI_API_KEY from env
+        # regardless of what we pass — set it explicitly so the auth header is sent
+        os.environ["OPENAI_API_KEY"] = api_key
         _llm = ChatOpenAI(
             model=os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
-            openai_api_key=os.environ["OPENROUTER_API_KEY"],
+            openai_api_key=api_key,
             openai_api_base="https://openrouter.ai/api/v1",
             temperature=0,
             default_headers={
