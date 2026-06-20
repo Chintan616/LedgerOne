@@ -23,6 +23,18 @@
   select {
     @apply outline-none;
   }
+
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: #1a2845;
+    color: #f0f1f8;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #6b7fa8;
+  }
 }
 
 /* Brand gradient — referenced via inline style */

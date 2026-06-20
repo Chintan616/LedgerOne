@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import StructuredTool
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
+from fastembed import TextEmbedding
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +169,10 @@ class MonthlyBreakdownInput(BaseModel):
 class EmptyInput(BaseModel):
     pass
 
+class SemanticSearchInput(BaseModel):
+    query: str = Field(description="Natural language query to search invoice/expense descriptions")
+    top_k: int = Field(default=5, description="Number of results to return (1-10)")
+
 # ── Build LangChain StructuredTools bound to a specific user ──────────────────
 
 def _make_tools(user_email: str) -> list[StructuredTool]:
@@ -191,6 +196,9 @@ def _make_tools(user_email: str) -> list[StructuredTool]:
 
     def get_monthly_breakdown(year: int | None = None) -> str:
         return _get_monthly_breakdown(user_email, year)
+
+    def semantic_search(query: str, top_k: int = 5) -> str:
+        return _semantic_search(user_email, query, top_k)
 
     return [
         StructuredTool.from_function(
@@ -235,7 +243,46 @@ def _make_tools(user_email: str) -> list[StructuredTool]:
             func=get_monthly_breakdown,
             args_schema=MonthlyBreakdownInput,
         ),
+        StructuredTool.from_function(
+            name="semantic_search",
+            description=(
+                "Search invoice line-item descriptions, invoice notes, and expense descriptions "
+                "using natural language. Use this when the user asks about the *content* or "
+                "*nature* of work billed or expenses — e.g. 'which invoices mention web design', "
+                "'find consulting expenses', 'what services did I bill to Acme'."
+            ),
+            func=semantic_search,
+            args_schema=SemanticSearchInput,
+        ),
     ]
+
+# ── Embedding model singleton ────────────────────────────────────────────────
+
+_embed_model: TextEmbedding | None = None
+
+def _get_embed_model() -> TextEmbedding:
+    global _embed_model
+    if _embed_model is None:
+        logger.info("Loading embedding model (first request only) ...")
+        _embed_model = TextEmbedding("BAAI/bge-small-en-v1.5")
+    return _embed_model
+
+# ── RAG: semantic search over embedded invoice/expense data ───────────────────
+
+def _semantic_search(user_email: str, query: str, top_k: int = 5) -> str:
+    emb = list(_get_embed_model().embed([query]))[0]
+    emb_str = "[" + ",".join(f"{v:.6f}" for v in emb.tolist()) + "]"
+    return _q(
+        """
+        SELECT source_type, content, metadata,
+               ROUND((1 - (embedding <=> CAST(:emb AS vector)))::numeric, 3) AS similarity
+        FROM   invoice_embeddings
+        WHERE  user_email = :ue
+        ORDER  BY embedding <=> CAST(:emb AS vector)
+        LIMIT  :k
+        """,
+        {"ue": user_email, "emb": emb_str, "k": top_k},
+    )
 
 # ── LLM singleton ─────────────────────────────────────────────────────────────
 

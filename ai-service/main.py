@@ -1,17 +1,41 @@
+import asyncio
 import os
 import logging
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 load_dotenv()
 
-from agent import run_chat  # noqa: E402 — import after dotenv so env vars are set
+from agent import run_chat        # noqa: E402
+from embed import embed_incremental  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="LedgerOne AI Service")
+EMBED_INTERVAL_SECONDS = 300  # 5 minutes
+
+async def _auto_embed_loop():
+    while True:
+        await asyncio.sleep(EMBED_INTERVAL_SECONDS)
+        logger.info("Running incremental embed ...")
+        try:
+            embed_incremental()
+        except Exception as exc:
+            logger.error("Incremental embed failed: %s", exc)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Seeding embeddings on startup ...")
+    try:
+        embed_incremental()
+    except Exception as exc:
+        logger.error("Startup embed failed: %s", exc)
+    asyncio.create_task(_auto_embed_loop())
+    yield
+
+app = FastAPI(title="LedgerOne AI Service", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
