@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      # Add any environment variables your Java backend needs here
+      - SPRING_PROFILES_ACTIVE=prod
+    restart: unless-stopped
+
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8001:8001"
+    environment:
+      # Add any environment variables your Python service needs here
+      - PORT=8001
+    # We add a restart policy so it boots automatically if the server restarts
+    restart: unless-stopped
